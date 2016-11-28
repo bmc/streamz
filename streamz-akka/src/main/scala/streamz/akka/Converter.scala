@@ -1,16 +1,32 @@
+/*
+ * Copyright 2014 - 2017 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package streamz.akka
 
-import akka.{Done, NotUsed}
+import akka.{ Done, NotUsed }
 import akka.actor._
 import akka.stream._
-import akka.stream.scaladsl.{Source => AkkaSource, Flow => AkkaFlow, Sink => AkkaSink, _}
+import akka.stream.scaladsl.{ Source => AkkaSource, Flow => AkkaFlow, Sink => AkkaSink, _ }
 
 import fs2._
 
 import streamz.akka.AkkaStreamPublisher._
 import streamz.akka.AkkaStreamSubscriber._
 
-import scala.concurrent.{Future, ExecutionContext}
+import scala.concurrent.{ Future, ExecutionContext }
 
 object Converter {
   type Callback[A] = Either[Throwable, A] => Unit
@@ -20,12 +36,10 @@ trait Converter {
   import Converter._
 
   /**
-    * Converts an Akka Stream [[Graph]] of [[SourceShape]] to an FS2 [[Stream]]. The [[Graph]] is materialized when
-    * the [[Stream]]'s [[Task]] in run. The materialized value can be obtained with the `onMaterialization` callback.
-    */
-  def akkaSourceToFs2Stream[O, M](source: Graph[SourceShape[O], M])
-                                 (onMaterialization: M => Unit)
-                                 (implicit executionContext: ExecutionContext, materializer: Materializer): Stream[Task, O] =
+   * Converts an Akka Stream [[Graph]] of [[SourceShape]] to an FS2 [[Stream]]. The [[Graph]] is materialized when
+   * the [[Stream]]'s [[Task]] in run. The materialized value can be obtained with the `onMaterialization` callback.
+   */
+  def akkaSourceToFs2Stream[O, M](source: Graph[SourceShape[O], M])(onMaterialization: M => Unit)(implicit executionContext: ExecutionContext, materializer: Materializer): Stream[Task, O] =
     Stream.bracket(
       Task.delay {
         val (mat, subscriber) = AkkaSource.fromGraph(source).toMat(AkkaSink.actorSubscriber[O](AkkaStreamSubscriber.props[O]))(Keep.both).run()
@@ -35,12 +49,10 @@ trait Converter {
     )(subscriberStream[O], _ => Task.now(()))
 
   /**
-    * Converts an Akka Stream [[Graph]] of [[SinkShape]] to an FS2 [[Sink]]. The [[Graph]] is materialized when
-    * the [[Sink]]'s [[Task]] in run. The materialized value can be obtained with the `onMaterialization` callback.
-    */
-  def akkaSinkToFs2Sink[I, M](sink: Graph[SinkShape[I], M])
-                             (onMaterialization: M => Unit)
-                             (implicit executionContext: ExecutionContext, materializer: Materializer): Sink[Task, I] = { s =>
+   * Converts an Akka Stream [[Graph]] of [[SinkShape]] to an FS2 [[Sink]]. The [[Graph]] is materialized when
+   * the [[Sink]]'s [[Task]] in run. The materialized value can be obtained with the `onMaterialization` callback.
+   */
+  def akkaSinkToFs2Sink[I, M](sink: Graph[SinkShape[I], M])(onMaterialization: M => Unit)(implicit executionContext: ExecutionContext, materializer: Materializer): Sink[Task, I] = { s =>
     Stream.bracket(
       Task.delay {
         val (publisher, mat) = AkkaSource.actorPublisher[I](AkkaStreamPublisher.props[I]).toMat(sink)(Keep.both).run()
@@ -51,12 +63,10 @@ trait Converter {
   }
 
   /**
-    * Converts an Akka Stream [[Graph]] of [[FlowShape]] to an FS2 [[Pipe]]. The [[Graph]] is materialized when
-    * the [[Pipe]]'s [[Task]] in run. The materialized value can be obtained with the `onMaterialization` callback.
-    */
-  def akkaFlowToFs2Pipe[I, O, M](flow: Graph[FlowShape[I, O], M])
-                                (onMaterialization: M => Unit)
-                                (implicit executionContext: ExecutionContext, materializer: Materializer): Pipe[Task, I, O] = { s =>
+   * Converts an Akka Stream [[Graph]] of [[FlowShape]] to an FS2 [[Pipe]]. The [[Graph]] is materialized when
+   * the [[Pipe]]'s [[Task]] in run. The materialized value can be obtained with the `onMaterialization` callback.
+   */
+  def akkaFlowToFs2Pipe[I, O, M](flow: Graph[FlowShape[I, O], M])(onMaterialization: M => Unit)(implicit executionContext: ExecutionContext, materializer: Materializer): Pipe[Task, I, O] = { s =>
     Stream.bracket(
       Task.delay {
         val src = AkkaSource.actorPublisher[I](AkkaStreamPublisher.props[I])
@@ -69,9 +79,9 @@ trait Converter {
   }
 
   /**
-    * Converts an FS2 [[Stream]] to an Akka Stream [[Graph]] of [[SourceShape]]. The [[Stream]] is run when the
-    * [[Graph]] is materialized.
-    */
+   * Converts an FS2 [[Stream]] to an Akka Stream [[Graph]] of [[SourceShape]]. The [[Stream]] is run when the
+   * [[Graph]] is materialized.
+   */
   def fs2StreamToAkkaSource[O](stream: Stream[Task, O])(implicit executionContext: ExecutionContext): Graph[SourceShape[O], NotUsed] = {
     val source = AkkaSource.actorPublisher(AkkaStreamPublisher.props[O])
     // A sink that runs an FS2 publisherStream when consuming the publisher actor (= materialized value) of source
@@ -85,9 +95,9 @@ trait Converter {
   }
 
   /**
-    * Converts an FS2 [[Sink]] to an Akka Stream [[Graph]] of [[SinkShape]]. The [[Sink]] is run when the
-    * [[Graph]] is materialized.
-    */
+   * Converts an FS2 [[Sink]] to an Akka Stream [[Graph]] of [[SinkShape]]. The [[Sink]] is run when the
+   * [[Graph]] is materialized.
+   */
   def fs2SinkToAkkaSink[I](sink: Sink[Task, I])(implicit executionContext: ExecutionContext): Graph[SinkShape[I], Future[Done]] = {
     val sink1: AkkaSink[I, ActorRef] = AkkaSink.actorSubscriber(AkkaStreamSubscriber.props[I])
     // A sink that runs an FS2 subscriberStream when consuming the subscriber actor (= materialized value) of sink1.
@@ -105,9 +115,9 @@ trait Converter {
   }
 
   /**
-    * Converts an FS2 [[Pipe]] to an Akka Stream [[Graph]] of [[FlowShape]]. The [[Pipe]] is run when the
-    * [[Graph]] is materialized.
-    */
+   * Converts an FS2 [[Pipe]] to an Akka Stream [[Graph]] of [[FlowShape]]. The [[Pipe]] is run when the
+   * [[Graph]] is materialized.
+   */
   def fs2PipeToAkkaFlow[I, O](pipe: Pipe[Task, I, O])(implicit executionContext: ExecutionContext): Graph[FlowShape[I, O], NotUsed] = {
     val source = AkkaSource.actorPublisher(AkkaStreamPublisher.props[O])
     val sink1: AkkaSink[I, ActorRef] = AkkaSink.actorSubscriber(AkkaStreamSubscriber.props[I])
@@ -129,7 +139,7 @@ trait Converter {
         Task.delay {
           subscriber ! PoisonPill
         }
-    }
+      }
   }
 
   private def publisherStream[I](publisher: ActorRef, stream: Stream[Task, I])(implicit executionContext: ExecutionContext): Stream[Task, Unit] = {
@@ -144,7 +154,7 @@ trait Converter {
           publisher ! Complete
           publisher ! PoisonPill
         }
-    }
+      }
   }
 
   private def transformerStream[I, O](subscriber: ActorRef, publisher: ActorRef, stream: Stream[Task, I])(implicit executionContext: ExecutionContext): Stream[Task, O] =

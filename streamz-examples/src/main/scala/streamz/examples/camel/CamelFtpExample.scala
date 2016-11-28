@@ -1,3 +1,19 @@
+/*
+ * Copyright 2014 - 2017 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package streamz.examples.camel
 
 import java.io.InputStream
@@ -16,11 +32,11 @@ object CamelFtpExample extends App {
   // FTP server endpoint accessed via camel-ftp (see also
   // http://camel.apache.org/components.html for a complete
   // list of configurable endpoints).
-  val enpointUri ="ftp://ftp.example.com?antInclude=*.txt&idempotent=true"
+  val enpointUri = "ftp://ftp.example.com?antInclude=*.txt&idempotent=true"
 
   val ftpLines: Stream[Task, String] = for {
     // receive existing (and new) *.txt files from server
-    is  <- receiveBody[InputStream](enpointUri)
+    is <- receiveBody[InputStream](enpointUri)
     // split each file into lines
     line <- Stream.repeatEval(Task.delay(is.read()))
       .takeWhile(_ != -1)
@@ -29,7 +45,7 @@ object CamelFtpExample extends App {
       .through(text.lines)
   } yield line
 
-  val printUpper: Stream[Task,Unit] = ftpLines
+  val printUpper: Stream[Task, Unit] = ftpLines
     // convert lines to upper case
     .map(_.toUpperCase)
     // write lines from all files to stdout

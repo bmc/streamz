@@ -1,3 +1,19 @@
+/*
+ * Copyright 2014 - 2017 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package streamz.examples.camel
 
 import akka.NotUsed
@@ -5,7 +21,7 @@ import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl._
 
-import fs2.{Strategy, Stream, Task}
+import fs2.{ Strategy, Stream, Task }
 
 import streamz.camel.StreamContext
 
@@ -20,12 +36,12 @@ object CamelFs2Example {
   val s: Stream[Task, Int] =
     // receive from endpoint
     receiveBody[String]("seda:q1")
-    // in-only message exchange with endpoint and continue stream with in-message
-    .send("seda:q2")
-    // in-out message exchange with endpoint and continue stream with out-message
-    .request[Int]("bean:service?method=length")
-    // in-only message exchange with endpoint
-    .send("seda:q3")
+      // in-only message exchange with endpoint and continue stream with in-message
+      .send("seda:q2")
+      // in-out message exchange with endpoint and continue stream with out-message
+      .request[Int]("bean:service?method=length")
+      // in-only message exchange with endpoint
+      .send("seda:q3")
 
   // create concurrent task from stream
   val t: Task[Unit] = s.run
@@ -48,12 +64,12 @@ object CamelAkkaExample extends App {
   val s: Source[Int, NotUsed] =
     // receive from endpoint
     receiveBody[String]("seda:q1")
-    // in-only message exchange with endpoint and continue stream with in-message
-    .send("seda:q2")
-    // in-out message exchange with endpoint and continue stream with out-message
-    .request[Int]("bean:service?method=length")
-    // in-only message exchange with endpoint
-    .send("seda:q3")
+      // in-only message exchange with endpoint and continue stream with in-message
+      .send("seda:q2")
+      // in-out message exchange with endpoint and continue stream with out-message
+      .request[Int]("bean:service?method=length")
+      // in-only message exchange with endpoint
+      .send("seda:q3")
 
   // run stream (side effects only here) ...
   s.runForeach(println)

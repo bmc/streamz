@@ -1,10 +1,21 @@
+import com.typesafe.sbt.SbtScalariform
+import com.typesafe.sbt.SbtScalariform.ScalariformKeys
+
+import de.heikoseeberger.sbtheader.license.Apache2_0
+
+import scalariform.formatter.preferences._
+
+// ---------------------------------------------------------------------------
+//  Main settings
+// ---------------------------------------------------------------------------
+
 name := "streamz"
 
 organization in ThisBuild := "com.github.krasserm"
 
 version in ThisBuild := "0.6-SNAPSHOT"
 
-crossScalaVersions := Seq("2.11.8", "2.12.0")
+crossScalaVersions in ThisBuild := Seq("2.11.8", "2.12.0")
 
 scalaVersion in ThisBuild := "2.12.0"
 
@@ -16,10 +27,44 @@ libraryDependencies in ThisBuild ++= Seq(
   "org.scalatest"     %% "scalatest"     % Version.Scalatest     % "test"
 )
 
-lazy val root = project.in(file(".")).aggregate(akka, camel, examples)
+// ---------------------------------------------------------------------------
+//  Code formatter settings
+// ---------------------------------------------------------------------------
+
+SbtScalariform.scalariformSettings
+
+ScalariformKeys.preferences := ScalariformKeys.preferences.value
+  .setPreference(AlignSingleLineCaseStatements, true)
+  .setPreference(DanglingCloseParenthesis, Preserve)
+  .setPreference(DoubleIndentClassDeclaration, false)
+
+// ---------------------------------------------------------------------------
+//  License header settings
+// ---------------------------------------------------------------------------
+
+lazy val header = Apache2_0("2014 - 2017", "the original author or authors.")
+
+lazy val headerSettings = Seq(headers := Map(
+  "scala" -> header,
+  "java" -> header
+))
+
+// ---------------------------------------------------------------------------
+//  Projects
+// ---------------------------------------------------------------------------
+
+lazy val root = project.in(file("."))
+  .aggregate(akka, camel, examples)
 
 lazy val akka = project.in(file("streamz-akka"))
+  .enablePlugins(AutomateHeaderPlugin)
+  .settings(headerSettings)
 
 lazy val camel = project.in(file("streamz-camel"))
+  .enablePlugins(AutomateHeaderPlugin)
+  .settings(headerSettings)
 
-lazy val examples = project.in(file("streamz-examples")).dependsOn(akka, camel)
+lazy val examples = project.in(file("streamz-examples"))
+  .enablePlugins(AutomateHeaderPlugin)
+  .settings(headerSettings)
+  .dependsOn(akka, camel)

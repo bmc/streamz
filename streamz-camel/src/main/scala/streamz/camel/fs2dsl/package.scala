@@ -1,9 +1,25 @@
+/*
+ * Copyright 2014 - 2017 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package streamz.camel
 
 import fs2._
 
 import org.apache.camel.spi.Synchronization
-import org.apache.camel.{Exchange, ExchangePattern}
+import org.apache.camel.{ Exchange, ExchangePattern }
 
 import scala.reflect.ClassTag
 import scala.util._
@@ -26,39 +42,39 @@ package object fs2dsl {
   }
 
   /**
-    * Produces a discrete stream of message bodies received at the Camel endpoint identified by `uri`.
-    * If needed, received message bodies are converted to type `O` using a Camel type converter.
-    *
-    * @param uri Camel endpoint URI.
-    */
+   * Produces a discrete stream of message bodies received at the Camel endpoint identified by `uri`.
+   * If needed, received message bodies are converted to type `O` using a Camel type converter.
+   *
+   * @param uri Camel endpoint URI.
+   */
   def receiveBody[O](uri: String)(implicit context: StreamContext, strategy: Strategy, tag: ClassTag[O]): Stream[Task, O] =
     receive(uri).map(_.body)
 
   /**
-    * ...
-    *
-    * @param uri Camel endpoint URI.
-    */
+   * ...
+   *
+   * @param uri Camel endpoint URI.
+   */
   def receive[O](uri: String)(implicit context: StreamContext, strategy: Strategy, tag: ClassTag[O]): Stream[Task, StreamMessage[O]] = {
     consume(uri).filter(_ != null)
   }
 
   /**
-    * A pipe that initiates an in-only message exchange with the Camel endpoint identified by `uri`.
-    * Continues the stream with the input message.
-    *
-    * @param uri Camel endpoint URI.
-    */
+   * A pipe that initiates an in-only message exchange with the Camel endpoint identified by `uri`.
+   * Continues the stream with the input message.
+   *
+   * @param uri Camel endpoint URI.
+   */
   def send[I](uri: String)(implicit context: StreamContext, strategy: Strategy): Pipe[Task, StreamMessage[I], StreamMessage[I]] =
     produce[I, I](uri, ExchangePattern.InOnly, (message, _) => message)
 
   /**
-    * A pipe that initiates an in-out message exchange with the Camel endpoint identified by `uri`.
-    * Continues the stream with the output message. If needed, received output message bodies are
-    * converted to type `O` using a Camel type converter.
-    *
-    * @param uri Camel endpoint URI.
-    */
+   * A pipe that initiates an in-out message exchange with the Camel endpoint identified by `uri`.
+   * Continues the stream with the output message. If needed, received output message bodies are
+   * converted to type `O` using a Camel type converter.
+   *
+   * @param uri Camel endpoint URI.
+   */
   def request[I, O](uri: String)(implicit context: StreamContext, strategy: Strategy, tag: ClassTag[O]): Pipe[Task, StreamMessage[I], StreamMessage[O]] =
     produce[I, O](uri, ExchangePattern.InOut, (_, exchange) => StreamMessage.from[O](exchange.getOut))
 
