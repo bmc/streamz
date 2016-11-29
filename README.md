@@ -2,6 +2,7 @@ Streamz
 =======
 
 [![Gitter](https://badges.gitter.im/krasserm/streamz.svg)](https://gitter.im/krasserm/streamz?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
+[![Build Status](https://travis-ci.org/krasserm/streamz.svg?branch=master)](https://travis-ci.org/krasserm/streamz)
 
 Streamz is a resource combinator library for [FS2](https://github.com/functional-streams-for-scala/fs2). It supports 
 
