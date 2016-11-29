@@ -16,61 +16,91 @@
 
 package streamz.examples.camel
 
-import akka.NotUsed
-import akka.actor.ActorSystem
-import akka.stream.ActorMaterializer
-import akka.stream.scaladsl._
-
-import fs2.{ Strategy, Stream, Task }
-
-import streamz.camel.StreamContext
-
-import scala.concurrent.ExecutionContext.Implicits.global
-
-object CamelFs2Example {
-  import streamz.camel.fs2dsl._
-
-  implicit val context = StreamContext()
-  implicit val strategy = Strategy.fromExecutionContext(global)
-
-  val s: Stream[Task, Int] =
-    // receive from endpoint
-    receiveBody[String]("seda:q1")
-      // in-only message exchange with endpoint and continue stream with in-message
-      .send("seda:q2")
-      // in-out message exchange with endpoint and continue stream with out-message
-      .request[Int]("bean:service?method=length")
-      // in-only message exchange with endpoint
-      .send("seda:q3")
-
-  // create concurrent task from stream
-  val t: Task[Unit] = s.run
-
-  // run task (side effects only here) ...
-  t.unsafeRun
-
-  val s1: Stream[Task, String] = receiveBody[String]("seda:q1")
-  val s2: Stream[Task, String] = s1.send("seda:q2")
-  val s3: Stream[Task, Int] = s1.request[Int]("bean:service?method=length")
+class ExampleService {
+  def linePrefix(lineNumber: Int): String = s"[$lineNumber] "
 }
 
-object CamelAkkaExample extends App {
+trait ExampleContext {
+  import org.apache.camel.impl.{ DefaultCamelContext, SimpleRegistry }
+  import streamz.camel.StreamContext
+
+  private val camelRegistry = new SimpleRegistry
+  private val camelContext = new DefaultCamelContext
+
+  camelContext.start()
+  camelContext.setRegistry(camelRegistry)
+  camelRegistry.put("exampleService", new ExampleService)
+
+  implicit val context: StreamContext =
+    StreamContext(camelContext)
+
+  val tcpEndpointUri: String =
+    "netty4:tcp://localhost:5150?sync=false&textline=true&encoding=utf-8"
+
+  val fileEndpointUri: String =
+    "file:input?charset=utf-8"
+
+  val serviceEndpointUri: String =
+    "bean:exampleService?method=linePrefix"
+
+  val printerEndpointUri: String =
+    "stream:out"
+}
+
+object CamelFs2Example extends ExampleContext with App {
+  import fs2._
+
+  // import Camel DSL for FS2
+  import streamz.camel.fs2dsl._
+
+  implicit val strategy: Strategy =
+    Strategy.fromExecutionContext(scala.concurrent.ExecutionContext.global)
+
+  val tcpLineStream: Stream[Task, String] =
+    receiveBody[String](tcpEndpointUri)
+
+  val fileLineStream: Stream[Task, String] =
+    receiveBody[String](fileEndpointUri).through(text.lines)
+
+  val linePrefixStream: Stream[Task, String] =
+    Stream.iterate(1)(_ + 1).request[String](serviceEndpointUri)
+
+  val stream: Stream[Task, String] =
+    tcpLineStream
+      .merge(fileLineStream)
+      .zipWith(linePrefixStream)((l, n) => n concat l)
+      .send(printerEndpointUri)
+
+  stream.run.unsafeRun
+}
+
+object CamelAkkaExample extends ExampleContext with App {
+  import akka.NotUsed
+  import akka.actor.ActorSystem
+  import akka.stream.ActorMaterializer
+  import akka.stream.scaladsl.{ Sink, Source }
+  import scala.collection.immutable.Iterable
+
+  // import Camel DSL for Akka Streams
   import streamz.camel.akkadsl._
 
   implicit val system = ActorSystem("example")
   implicit val materializer = ActorMaterializer()
-  implicit val context = StreamContext()
 
-  val s: Source[Int, NotUsed] =
-    // receive from endpoint
-    receiveBody[String]("seda:q1")
-      // in-only message exchange with endpoint and continue stream with in-message
-      .send("seda:q2")
-      // in-out message exchange with endpoint and continue stream with out-message
-      .request[Int]("bean:service?method=length")
-      // in-only message exchange with endpoint
-      .send("seda:q3")
+  val tcpLineSource: Source[String, NotUsed] =
+    receiveBody[String](tcpEndpointUri)
 
-  // run stream (side effects only here) ...
-  s.runForeach(println)
+  val fileLineSource: Source[String, NotUsed] =
+    receiveBody[String](fileEndpointUri).mapConcat(_.lines.to[Iterable])
+
+  val linePrefixSource: Source[String, NotUsed] =
+    Source.fromIterator(() => Iterator.from(1)).request[String](serviceEndpointUri)
+
+  val stream: Source[String, NotUsed] =
+    tcpLineSource
+      .merge(fileLineSource)
+      .zipWith(linePrefixSource)((l, n) => n concat l)
+      .send(printerEndpointUri)
+
+  stream.runWith(Sink.ignore)
 }

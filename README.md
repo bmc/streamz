@@ -140,7 +140,7 @@ import fs2.{Strategy, Stream, Task}
 import streamz.camel.StreamContext
 import streamz.camel.fs2dsl._
 
-import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.ExecutionContext.global
 
 implicit val context = StreamContext()
 implicit val strategy = Strategy.fromExecutionContext(global)
@@ -148,12 +148,12 @@ implicit val strategy = Strategy.fromExecutionContext(global)
 val s: Stream[Task, Int] =
   // receive from endpoint
   receiveBody[String]("seda:q1")
-  // in-only message exchange with endpoint and continue stream with in-message
-  .send("seda:q2")
-  // in-out message exchange with endpoint and continue stream with out-message
-  .request[Int]("bean:service?method=length")
-  // in-only message exchange with endpoint
-  .send("seda:q3")
+    // in-only message exchange with endpoint and continue stream with in-message
+    .send("seda:q2")
+    // in-out message exchange with endpoint and continue stream with out-message
+    .request[Int]("bean:service?method=length")
+    // in-only message exchange with endpoint
+    .send("seda:q3")
 
 // create concurrent task from stream
 val t: Task[Unit] = s.run

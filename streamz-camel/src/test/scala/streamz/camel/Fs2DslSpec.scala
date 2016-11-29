@@ -28,7 +28,7 @@ import org.apache.camel.impl.{ DefaultCamelContext, SimpleRegistry }
 import org.scalatest._
 
 import scala.collection.immutable.Seq
-import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.ExecutionContext.global
 
 class Fs2DslSpec extends TestKit(ActorSystem("test")) with WordSpecLike with Matchers with BeforeAndAfterAll {
   val camelRegistry = new SimpleRegistry
