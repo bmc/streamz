@@ -36,13 +36,13 @@ class StreamContext(val camelContext: CamelContext) {
   lazy val producerTemplate: ProducerTemplate =
     camelContext.createProducerTemplate()
 
-  def exchange[A](message: StreamMessage[A], pattern: ExchangePattern): Exchange = {
+  def createExchange[A](message: StreamMessage[A], pattern: ExchangePattern): Exchange = {
     val exchange = new DefaultExchange(camelContext, pattern)
     exchange.setIn(message.camelMessage)
     exchange
   }
 
-  def convert[A](obj: Any)(implicit classTag: ClassTag[A]): A = {
+  def convertObject[A](obj: Any)(implicit classTag: ClassTag[A]): A = {
     val clazz = classTag.runtimeClass.asInstanceOf[Class[A]]
     val result = camelContext.getTypeConverter.mandatoryConvertTo[A](clazz, obj)
 

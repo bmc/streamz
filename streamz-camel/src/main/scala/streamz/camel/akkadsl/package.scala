@@ -85,7 +85,7 @@ package object akkadsl {
 
   private def produce[I, O](uri: String, message: StreamMessage[I], pattern: ExchangePattern, result: (StreamMessage[I], Exchange) => StreamMessage[O])(implicit context: StreamContext): Future[StreamMessage[O]] = {
     val promise = Promise[StreamMessage[O]]()
-    context.producerTemplate.asyncCallback(uri, context.exchange(message, pattern), new Synchronization {
+    context.producerTemplate.asyncCallback(uri, context.createExchange(message, pattern), new Synchronization {
       override def onFailure(exchange: Exchange): Unit =
         promise.failure(exchange.getException)
       override def onComplete(exchange: Exchange): Unit = Try(result(message, exchange)) match {

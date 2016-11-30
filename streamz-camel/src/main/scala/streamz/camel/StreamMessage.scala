@@ -24,13 +24,13 @@ import scala.reflect.ClassTag
 
 case class StreamMessage[A](body: A, headers: Map[String, Any] = Map.empty) {
   def bodyAs[B](implicit tag: ClassTag[B], streamContext: StreamContext): B =
-    streamContext.convert(body)
+    streamContext.convertObject(body)
 
   def headerAs[B](name: String)(implicit tag: ClassTag[B], streamContext: StreamContext): B =
     headerOptionAs[B](name).get
 
   def headerOptionAs[B](name: String)(implicit tag: ClassTag[B], streamContext: StreamContext): Option[B] =
-    headers.get(name).map(streamContext.convert)
+    headers.get(name).map(streamContext.convertObject)
 
   private[camel] def camelMessage: CamelMessage = {
     val result = new DefaultMessage

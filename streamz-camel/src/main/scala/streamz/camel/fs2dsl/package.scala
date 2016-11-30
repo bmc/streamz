@@ -106,7 +106,7 @@ package object fs2dsl {
     s.flatMap { message =>
       Stream.eval {
         Task.async[StreamMessage[O]] { callback =>
-          producerTemplate.asyncCallback(uri, context.exchange(message, pattern), new Synchronization {
+          producerTemplate.asyncCallback(uri, context.createExchange(message, pattern), new Synchronization {
             override def onFailure(exchange: Exchange): Unit =
               callback(Left(exchange.getException))
             override def onComplete(exchange: Exchange): Unit = Try(result(message, exchange)) match {
