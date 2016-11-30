@@ -22,9 +22,12 @@ scalaVersion in ThisBuild := "2.12.0"
 scalacOptions in ThisBuild ++= Seq("-feature", "-language:higherKinds", "-language:implicitConversions", "-deprecation")
 
 libraryDependencies in ThisBuild ++= Seq(
-  "co.fs2"            %% "fs2-core"      % Version.Fs2,
-  "com.typesafe.akka" %% "akka-testkit"  % Version.Akka          % "test",
-  "org.scalatest"     %% "scalatest"     % Version.Scalatest     % "test"
+  "co.fs2"            %% "fs2-core"            % Version.Fs2,
+  "com.typesafe.akka" %% "akka-actor"          % Version.Akka,
+  "com.typesafe.akka" %% "akka-stream"         % Version.Akka,
+  "com.typesafe.akka" %% "akka-stream-testkit" % Version.Akka      % "test",
+  "com.typesafe.akka" %% "akka-testkit"        % Version.Akka      % "test",
+  "org.scalatest"     %% "scalatest"           % Version.Scalatest % "test"
 )
 
 // ---------------------------------------------------------------------------

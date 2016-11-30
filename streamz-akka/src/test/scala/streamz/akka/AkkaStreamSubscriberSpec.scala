@@ -27,14 +27,14 @@ import akka.testkit._
 import org.scalatest._
 
 object AkkaStreamSubscriberSpec {
-  class TestAkkaStreamSubscriber(probe: TestProbe) extends AkkaStreamSubscriber[Int] {
+  class TestAkkaStreamSubscriber(probe: ActorRef) extends AkkaStreamSubscriber[Int] {
     override def waiting: Receive = {
       case m: OnError =>
         super.waiting(m)
-        probe.ref ! m
+        probe ! m
       case m @ OnComplete =>
         super.waiting(m)
-        probe.ref ! m
+        probe ! m
       case m if super.waiting.isDefinedAt(m) =>
         super.waiting(m)
     }
@@ -58,7 +58,7 @@ class AkkaStreamSubscriberSpec extends TestKit(ActorSystem("test")) with WordSpe
     probe.ref ! _
 
   def testSourceAndActorSubscriber(probe: TestProbe = TestProbe()): (TestPublisher.Probe[Int], ActorRef) =
-    TestSource.probe[Int].toMat(Sink.actorSubscriber(Props(new TestAkkaStreamSubscriber(probe))))(Keep.both).run()
+    TestSource.probe[Int].toMat(Sink.actorSubscriber(Props(new TestAkkaStreamSubscriber(probe.ref))))(Keep.both).run()
 
   "An AkkaStreamSubscriber" when {
     "in waiting state" must {

@@ -29,16 +29,16 @@ import org.scalatest._
 import scala.util._
 
 object AkkaStreamPublisherSpec {
-  class TestAkkaStreamPublisher(probe: TestProbe) extends AkkaStreamPublisher[Int] {
+  class TestAkkaStreamPublisher(probe: ActorRef) extends AkkaStreamPublisher[Int] {
     val delegate: Receive =
       super.receive
 
     override def receive = {
       case m: Request =>
         delegate(m)
-        probe.ref ! m
+        probe ! m
       case m @ Cancel =>
-        probe.ref ! m
+        probe ! m
       case m if delegate.isDefinedAt(m) =>
         delegate(m)
     }
@@ -62,7 +62,7 @@ class AkkaStreamPublisherSpec extends TestKit(ActorSystem("test")) with WordSpec
     probe.ref ! _
 
   def actorPublisherAndTestSink(probe: TestProbe = TestProbe()): (ActorRef, TestSubscriber.Probe[Int]) =
-    Source.actorPublisher(Props(new TestAkkaStreamPublisher(probe))).toMat(TestSink.probe[Int])(Keep.both).run()
+    Source.actorPublisher(Props(new TestAkkaStreamPublisher(probe.ref))).toMat(TestSink.probe[Int])(Keep.both).run()
 
   "An AkkaStreamPublisher" must {
     "publish an upstream element if there is demand and call back with a defined value" in {

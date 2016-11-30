@@ -37,19 +37,16 @@ private[camel] object EndpointConsumer {
 private[camel] class EndpointConsumer[O](uri: String)(implicit streamContext: StreamContext, tag: ClassTag[O]) extends ActorPublisher[StreamMessage[O]] {
   import EndpointConsumer._
 
-  val waiting: Receive = {
+  def waiting: Receive = {
     case r: Request =>
       consume()
       context.become(consuming)
   }
 
-  val consuming: Receive = {
-    case ConsumeSuccess(m) if totalDemand > 0 =>
-      onNext(m.asInstanceOf[StreamMessage[O]])
-      if (!isCanceled) consume()
+  def consuming: Receive = {
     case ConsumeSuccess(m) =>
       onNext(m.asInstanceOf[StreamMessage[O]])
-      context.become(waiting)
+      if (!isCanceled && totalDemand > 0) consume() else context.become(waiting)
     case ConsumeTimeout =>
       if (!isCanceled) consume()
     case ConsumeFailure(e) =>
