@@ -17,22 +17,22 @@
 package streamz.camel
 
 import org.apache.camel.impl.DefaultMessage
-import org.apache.camel.{ Message => CamelMessage }
+import org.apache.camel.Message
 
 import scala.collection.JavaConverters._
 import scala.reflect.ClassTag
 
 case class StreamMessage[A](body: A, headers: Map[String, Any] = Map.empty) {
-  def bodyAs[B](implicit tag: ClassTag[B], streamContext: StreamContext): B =
+  def bodyAs[B](implicit streamContext: StreamContext, tag: ClassTag[B]): B =
     streamContext.convertObject(body)
 
-  def headerAs[B](name: String)(implicit tag: ClassTag[B], streamContext: StreamContext): B =
+  def headerAs[B](name: String)(implicit streamContext: StreamContext, tag: ClassTag[B]): B =
     headerOptionAs[B](name).get
 
-  def headerOptionAs[B](name: String)(implicit tag: ClassTag[B], streamContext: StreamContext): Option[B] =
-    headers.get(name).map(streamContext.convertObject)
+  def headerOptionAs[B](name: String)(implicit streamContext: StreamContext, tag: ClassTag[B]): Option[B] =
+    headers.get(name).map(streamContext.convertObject[B])
 
-  private[camel] def camelMessage: CamelMessage = {
+  private[camel] def camelMessage: Message = {
     val result = new DefaultMessage
 
     headers.foreach {
@@ -45,6 +45,6 @@ case class StreamMessage[A](body: A, headers: Map[String, Any] = Map.empty) {
 }
 
 object StreamMessage {
-  def from[A](camelMessage: CamelMessage)(implicit tag: ClassTag[A]): StreamMessage[A] =
+  private[camel] def from[A](camelMessage: Message)(implicit tag: ClassTag[A]): StreamMessage[A] =
     new StreamMessage(camelMessage.getBody(tag.runtimeClass.asInstanceOf[Class[A]]), camelMessage.getHeaders.asScala.toMap)
 }
